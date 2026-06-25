@@ -216,6 +216,27 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:system-
 .toast.ok{background:#ECFDF5;border:1px solid #A7F3D0;color:#065F46;}
 .toast.err{background:#FEF2F2;border:1px solid #FECACA;color:#B91C1C;}
 .toast.show{opacity:1;transform:translateY(0);}
+
+/* Day Modal */
+.day-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:3000;opacity:0;transition:opacity .2s}
+.day-modal-bg.open{opacity:1}
+.day-modal-card{background:var(--surface);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.15);width:min(520px,94vw);max-height:82vh;display:flex;flex-direction:column;transform:translateY(28px) scale(.92);transition:transform .28s cubic-bezier(.34,1.56,.64,1)}
+.day-modal-bg.open .day-modal-card{transform:translateY(0) scale(1)}
+.day-modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border);font-size:15px;font-weight:700;color:var(--text)}
+.day-modal-x{background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-3);padding:4px 8px;border-radius:6px;line-height:1;transition:background .15s}
+.day-modal-x:hover{background:var(--surface-2);color:var(--text)}
+.day-modal-body{overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.dm-row{background:var(--surface-2);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:5px}
+.dm-row-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dm-sonum{font-weight:700;font-size:14px}
+.dm-cust{font-size:13px;color:var(--text-2)}
+.dm-ship{font-size:12px;color:var(--text-3);font-weight:600}
+.dm-memo{font-size:12px;color:var(--text-3);font-style:italic;white-space:pre-wrap;word-break:break-word}
+.dm-edit-btn{margin-left:auto;background:none;border:1px solid var(--border-2);border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer;color:var(--primary);font-weight:500;transition:background .15s}
+.dm-edit-btn:hover{background:var(--primary-bg)}
+/* Day view edit button */
+.dv-edit-btn{display:inline-block;margin-top:6px;background:none;border:1px solid var(--border);border-radius:6px;padding:4px 12px;font-size:12px;cursor:pointer;color:var(--primary);font-weight:500;transition:background .15s}
+.dv-edit-btn:hover{background:var(--primary-bg)}
 </style>
 </head>
 <body>
@@ -510,18 +531,47 @@ function socHTML(so,drag=true){
   </div>`;
 }
 
+function showDayModal(iso){
+  var g=groupByDate(filt()),sos=g[iso]||[];
+  var dt=new Date(iso+'T12:00:00');
+  var title=dt.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  var rows=sos.map(function(so){
+    var c=cc(so.entity,so.customer_name),sc=SC[so.status]||SC.B;
+    var r='<div class="dm-row" style="border-left:4px solid '+c.b+'">'
+      +'<div class="dm-row-top">'
+      +'<span class="dm-sonum" style="color:'+c.t+'">#'+esc(so.tranid)+'</span>'
+      +'<span class="stat-chip" style="color:'+sc.t+';border-color:'+sc.b+';background:'+sc.bg+'">'
+      +(SL[so.status]||so.status)+'</span>'
+      +'<button class="dm-edit-btn" onclick="closeDayModal();openDP(\''+ so.id +'\')">&#9998;&#160;Edit</button>'
+      +'</div>'
+      +'<div class="dm-cust">'+esc(so.customer_name||'')+'</div>';
+    if(so.shipdate)r+='<div class="dm-ship">Ship:&#160;'+fmtNS(so.shipdate)+'</div>';
+    if(so.memo)r+='<div class="dm-memo">'+esc(so.memo)+'</div>';
+    return r+'</div>';
+  }).join('');
+  var el=document.createElement('div');
+  el.id='day-modal';el.className='day-modal-bg';
+  el.onclick=function(e){if(e.target===this)closeDayModal();};
+  el.innerHTML='<div class="day-modal-card"><div class="day-modal-hdr"><span>'+title+'</span><button class="day-modal-x" onclick="closeDayModal()">&#10005;</button></div><div class="day-modal-body">'+(rows||'<p style="padding:20px;color:var(--text-3)">No orders</p>')+'</div></div>';
+  document.body.appendChild(el);
+  requestAnimationFrame(function(){el.classList.add('open');});
+}
+function closeDayModal(){
+  var m=document.getElementById('day-modal');
+  if(m){m.classList.remove('open');setTimeout(function(){m.remove();},250);}
+}
+
 function renderMonth(m,g){
   const y=S.date.getFullYear(),mo=S.date.getMonth();
   const grid=getGrid(y,mo);
   let h=`<div class="mv-wrap"><div class="dow-row">${DS.map(d=>`<div class="dow-cell">${d}</div>`).join('')}</div><div class="mcells">`;
   for(const d of grid){
-    const iso=toISO(d),inM=d.getMonth()===mo,tod=isToday(d),sos=g[iso]||[],exp=S.expanded.has(iso);
-    const vis=exp?sos:sos.slice(0,3),ov=sos.length-3;
+    const iso=toISO(d),inM=d.getMonth()===mo,tod=isToday(d),sos=g[iso]||[];
+    const vis=sos.slice(0,3),ov=sos.length-3;
     h+=`<div class="ccell${inM?'':' faded'}" data-date="${iso}" onclick="drillDay('${iso}')" ondragover="event.preventDefault();this.classList.add('drag-ov')" ondragleave="this.classList.remove('drag-ov')" ondrop="drop(event,'${iso}')">
       <div class="dnum${tod?' tod':''}">${d.getDate()}</div>
       ${vis.map(so=>socHTML(so)).join('')}
-      ${!exp&&ov>0?`<button class="more-b" onclick="event.stopPropagation();S.expanded.add('${iso}');render()">+${ov} more</button>`:''}
-      ${exp&&sos.length>3?`<button class="more-b" onclick="event.stopPropagation();S.expanded.delete('${iso}');render()">Show less</button>`:''}
+      ${ov>0?`<button class="more-b" onclick="event.stopPropagation();showDayModal('${iso}')"  >+${ov} more</button>`:''}
     </div>`;
   }
   m.innerHTML=h+'</div></div>';
@@ -567,6 +617,7 @@ function renderDay(m,g){
           <div class="dv-f"><div class="dv-fl">Ship Date</div><div class="dv-fv">${fmtNS(so.shipdate)}</div></div>
           ${so.memo?`<div class="dv-f" style="grid-column:1/-1"><div class="dv-fl">Memo</div><div class="dv-fv">${esc(so.memo)}</div></div>`:''}
         </div>
+        <button class="dv-edit-btn" onclick="event.stopPropagation();openDP('${so.id}')">&#9998;&#160;Edit</button>
       </div>
     </div>`;
   }
