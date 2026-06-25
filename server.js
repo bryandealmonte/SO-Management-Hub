@@ -4,14 +4,18 @@ const crypto  = require('crypto');
 const axios   = require('axios');
 const cors    = require('cors');
 const path    = require('path');
+const dns     = require('dns').promises;
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
-const ACCOUNT_ID  = (process.env.NS_ACCOUNT_ID || '').toLowerCase().replace(/_/g, '-');
-const NS_BASE     = `https://${ACCOUNT_ID}.suiteanalytics.com/services/rest`;
+const ACCOUNT_ID = (process.env.NS_ACCOUNT_ID || '').toLowerCase().replace(/_/g, '-');
+const NS_BASE = process.env.NS_BASE_URL || `https://${ACCOUNT_ID}.suiteanalytics.com/services/rest`;
+
+console.log(`NS_ACCOUNT_ID: ${process.env.NS_ACCOUNT_ID}`);
+console.log(`NS_BASE: ${NS_BASE}`);
 
 const enc = s => encodeURIComponent(String(s));
 
@@ -35,6 +39,16 @@ function oauthHeader(method, baseUrl, queryParams = {}) {
   return `OAuth realm="${process.env.NS_ACCOUNT_ID}",` + Object.keys(oParams).map(k => `${k}="${enc(oParams[k])}"`).join(',');
 }
 
+app.get('/debug', async (req, res) => {
+  const hostname = `${ACCOUNT_ID}.suiteanalytics.com`;
+  const results = { NS_BASE, hostname, ACCOUNT_ID };
+  try { const a = await dns.resolve(hostname); results.dns = { ok: true, addresses: a }; }
+  catch (e) { results.dns = { ok: false, error: e.message }; }
+  try { await dns.resolve('google.com'); results.outbound = { ok: true }; }
+  catch (e) { results.outbound = { ok: false, error: e.message }; }
+  res.json(results);
+});
+
 app.post('/suiteql', async (req, res) => {
   const { query, limit = 1000, offset = 0 } = req.body;
   if (!query) return res.status(400).json({ error: 'query is required' });
@@ -47,11 +61,12 @@ app.post('/suiteql', async (req, res) => {
         'Content-Type': 'application/json',
         Prefer:         'transient',
       },
+      timeout: 30000,
     });
     res.json(r.data);
   } catch (e) {
     const detail = e.response?.data || e.message;
-    console.error('SuiteQL error:', detail);
+    console.error('SuiteQL error:', JSON.stringify(detail));
     res.status(500).json({ error: detail });
   }
 });
@@ -61,15 +76,13 @@ app.patch('/record/:type/:id', async (req, res) => {
   const url = `${NS_BASE}/record/v1/${type}/${id}`;
   try {
     await axios.patch(url, req.body, {
-      headers: {
-        Authorization:  oauthHeader('PATCH', url),
-        'Content-Type': 'application/json',
-      },
+      headers: { Authorization: oauthHeader('PATCH', url), 'Content-Type': 'application/json' },
+      timeout: 30000,
     });
     res.json({ success: true });
   } catch (e) {
     const detail = e.response?.data || e.message;
-    console.error('Record update error:', detail);
+    console.error('Record update error:', JSON.stringify(detail));
     res.status(500).json({ error: detail });
   }
 });
