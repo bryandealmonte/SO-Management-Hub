@@ -792,3 +792,14 @@ document.addEventListener('keydown',ev=>{
 
 // ── Toast
 let _tt=null
+;
+function toast(msg,type='ok'){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className=`toast ${type} show`;
+  clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),3500);
+}
+
+loadSOs();
+</script>
+</body>
+</html>
