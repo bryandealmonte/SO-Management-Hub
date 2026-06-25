@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: so-calendar
+    runtime: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NS_ACCOUNT_ID
+        sync: false
+      - key: NS_CONSUMER_KEY
+        sync: false
+      - key: NS_CONSUMER_SECRET
+        sync: false
+      - key: NS_TOKEN_KEY
+        sync: false
+      - key: NS_TOKEN_SECRET
+        sync: false
