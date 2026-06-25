@@ -11,7 +11,7 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const ACCOUNT_ID = (process.env.NS_ACCOUNT_ID || '').toUpperCase();
-const NS_BASE = process.env.NS_BASE_URL || ('https://' + ACCOUNT_ID.toLowerCase().replace(/_/g,'-') + '.app.netsuite.com/services/rest');
+const NS_BASE = process.env.NS_BASE_URL || ('https://' + ACCOUNT_ID.toLowerCase().replace(/_/g,'-') + '.suitetalk.api.netsuite.com/services/rest');
 
 console.log('NS_ACCOUNT_ID:', process.env.NS_ACCOUNT_ID);
 console.log('NS_BASE:', NS_BASE);
