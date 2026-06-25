@@ -241,7 +241,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:system-
     </div>
     <div class="srch-wrap">
       <span class="srch-icon">&#128269;</span>
-      <input class="srch" id="srch" type="text" placeholder="Search SO#…" oninput="onSearch(this.value)">
+      <input class="srch" id="srch" type="text" placeholder="Search SO…" oninput="onSearch(this.value)">
     </div>
     <div class="loading-bar" id="lb"></div>
   </header>
@@ -388,7 +388,7 @@ const nsToISO=s=>{const d=parseNS(s);return d?toISO(d):'';};
 const isoToNS=s=>{if(!s)return'';const[y,m,d]=s.split('-');return`${m}/${d}/${y}`;};
 const fmtNS=s=>{const d=parseNS(s);return d?d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):''};
 const isToday=d=>{const n=new Date();return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate();};
-const fmtCur=v=>{const n=Math.abs(+v);return isNaN(n)?'—':'$'+n.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})};
+const fmtCur=v=>{const n=Math.abs(+v);return isNaN(n)?'—':'$'+n.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});};
 const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
 function getGrid(y,m){const g=[];const f=new Date(y,m,1);const s=new Date(f);s.setDate(s.getDate()-s.getDay());for(let i=0;i<42;i++){g.push(new Date(s));s.setDate(s.getDate()+1);}return g;}
@@ -607,7 +607,7 @@ async function openDP(soId){
   document.getElementById('dp-sonum').style.color=c.t;
   document.getElementById('dp-sonum').textContent='Sales Order #'+so.tranid;
   document.getElementById('dp-title').textContent=so.customer_name||'';
-  document.getElementById('dp-chip').innerHTML=`<span class="stat-chip" style="color:${sc.t};border-color:${sc.b};background:${sc.bg}">${SL[so.status]||so.status}</span>`;
+  document.getElementById('dp-chip').innerHTML<`<span class="stat-chip" style="color:${sc.t};border-color:${sc.b};background:${sc.bg}">${SL[so.status]||so.status}</span>`;
   document.getElementById('ns-a').href=`https://system.netsuite.com/app/accounting/transactions/salesord.nl?id=${soId}`;
   document.getElementById('save-b').disabled=false;
   document.getElementById('save-b').textContent='Save Changes';
@@ -641,7 +641,7 @@ async function openDP(soId){
     let li=lines.map((l,i)=>{const lc=cc(l.item||i);const nm=l.itemid||('Item #'+(l.item||l.linenumber));return`<div class="li-r"><div class="li-dot" style="background:${lc.b}"></div><div class="li-nm">${esc(nm)}</div><div class="li-qty">\xd7${l.quantity}</div><div class="li-amt">${fmtCur(l.amount)}</div></div>`;}).join('');
     if(lines.length>1)li+=`<div class="li-r li-tot"><div class="li-nm">Total</div><div class="li-amt">${fmtCur(tot)}</div></div>`;
     document.getElementById('dp-li').innerHTML=li;
-  }catch(err){document.getElementById('dp-li').innerHTML=`<div style="color:#B91C1C;font-size:11px">Could not load items: ${err.message}</div>`;}
+  }catch(err){document.getElementById('dp-li').innerHTML<`<div style="color:#B91C1C;font-size:11px">Could not load items: ${err.message}</div>`;}
 }
 
 async function saveDP(){
@@ -723,26 +723,6 @@ function toggleSec(id){
   el.style.display=hidden?'':'none';
   arr.textContent=hidden?'▾':'▸';
 }
-  else if(ev.key==='Escape')closeDP();
-  else if(ev.key==='t')goToday();
-  else if(ev.key==='m')setView('month');
-  else if(ev.key==='w')setView('week');
-  else if(ev.key==='d')setView('day');
-  else if(ev.key==='y')setView('year');
-});
-
-// ── Toast
-let _tt=null;
-function toast(msg,type='ok'){
-  const el=document.getElementById('toast');
-  el.textContent=msg;el.className=`toast ${type} show`;
-  clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),3500);
-}
-
-loadSOs();
-</script>
-</body>
-</html>
 function toggleSb(){
   S.sbOpen=!S.sbOpen;
   document.getElementById('sb').classList.toggle('closed',!S.sbOpen);
@@ -811,14 +791,4 @@ document.addEventListener('keydown',ev=>{
 });
 
 // ── Toast
-let _tt=null;
-function toast(msg,type='ok'){
-  const el=document.getElementById('toast');
-  el.textContent=msg;el.className=`toast ${type} show`;
-  clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),3500);
-}
-
-loadSOs();
-</script>
-</body>
-</html>
+let _tt=null
