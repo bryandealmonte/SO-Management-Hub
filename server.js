@@ -47,7 +47,15 @@ function oauthHeader(method, baseUrl, queryParams = {}) {
 
 // GET /debug
 app.get('/debug', (req, res) => {
-  res.json({ NS_BASE, ACCOUNT_ID, env_keys: Object.keys(process.env).filter(k => k.startsWith('NS_')) });
+  const peek = v => v ? `${v.slice(0,4)}...${v.slice(-4)} (len:${v.length})` : 'NOT SET';
+  res.json({
+    NS_BASE, ACCOUNT_ID,
+    NS_ACCOUNT_ID:      process.env.NS_ACCOUNT_ID,
+    NS_CONSUMER_KEY:    peek(process.env.NS_CONSUMER_KEY),
+    NS_CONSUMER_SECRET: peek(process.env.NS_CONSUMER_SECRET),
+    NS_TOKEN_KEY:       peek(process.env.NS_TOKEN_KEY),
+    NS_TOKEN_SECRET:    peek(process.env.NS_TOKEN_SECRET),
+  });
 });
 
 // POST /suiteql
