@@ -16,7 +16,7 @@ const NS_BASE = process.env.NS_BASE_URL || `https://${ACCOUNT_ID}.app.netsuite.c
 console.log(`NS_ACCOUNT_ID: ${process.env.NS_ACCOUNT_ID}`);
 console.log(`NS_BASE: ${NS_BASE}`);
 
-// Direct axios request — app.netsuite.com resolves fine via standard DNS.
+// Direct axios request â app.netsuite.com resolves fine via standard DNS.
 async function nsRequest(method, url, data, headers) {
   return axios({ method, url, data, headers, timeout: 30000 });
 }
@@ -99,5 +99,6 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+const P
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`SO Calendar server running on :${PORT}`));
