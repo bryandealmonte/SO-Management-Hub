@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SO Calendar</title>
+<style>
+:root{
+  --bg:#F8FAFC;--surface:#fff;--surface-2:#F1F5F9;--surface-3:#E8EEF5;
+  --border:#E2E8F0;--border-2:#CBD5E1;
+  --text:#0F172A;--text-2:#475569;--text-3:#94A3B8;
+  --primary:#2563EB;--primary-bg:rgba(37,99,235,.07);--primary-t:#1E3A8A;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.05);
+  --shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 4px 8px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.05);
+  --shadow-lg:0 12px 28px rgba(0,0,0,.1),0 4px 10px rgba(0,0,0,.07);
+  --radius:8px;--radius-sm:5px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,'Segoe UI',sans-serif;overflow:hidden;font-size:13px;}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:#94A3B8;}
+
+/* Layout */
+.app{display:flex;flex-direction:column;height:100vh;}
+.body-wrap{display:flex;flex:1;overflow:hidden;}
+.main{flex:1;overflow:hidden;display:flex;flex-direction:column;background:var(--bg);}
+
+/* Header */
+.hdr{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px;height:54px;gap:10px;
+  flex-shrink:0;position:relative;z-index:10;box-shadow:var(--shadow-sm);
+}
+.logo{font-size:14px;font-weight:700;white-space:nowrap;display:flex;align-items:center;gap:8px;}
+.logo-icon{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#2563EB,#7C3AED);display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;box-shadow:0 2px 6px rgba(37,99,235,.28);}
+.logo-text{color:var(--text);font-size:15px;font-weight:700;}
+.period{font-size:14px;font-weight:600;color:var(--text);min-width:160px;}
+.nav-btn{background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--text-2);cursor:pointer;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;transition:all .15s;}
+.nav-btn:hover{background:var(--surface-2);border-color:var(--border-2);color:var(--text);}
+.today-btn{background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text-2);padding:5px 12px;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;flex-shrink:0;transition:all .15s;}
+.today-btn:hover{background:var(--surface-2);color:var(--text);}
+.spacer{flex:1;}
+.view-sw{display:flex;background:var(--surface-2);border-radius:7px;padding:3px;gap:2px;}
+.vbtn{background:transparent;border:none;border-radius:5px;color:var(--text-3);padding:4px 11px;cursor:pointer;font-size:11px;font-weight:600;font-family:inherit;transition:all .15s;}
+.vbtn:hover{color:var(--text-2);}
+.vbtn.active{background:var(--surface);color:var(--primary);box-shadow:var(--shadow-sm);}
+.srch-wrap{position:relative;}
+.srch-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--text-3);pointer-events:none;}
+.srch{background:var(--surface-2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:12px;padding:6px 9px 6px 27px;outline:none;width:180px;transition:all .2s;font-family:inherit;}
+.srch:focus{border-color:var(--primary);background:var(--surface);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.cnt{font-size:11px;color:var(--text-3);white-space:nowrap;}
+.loading-bar{position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,#2563EB,#7C3AED,#EC4899,#2563EB);background-size:200% 100%;animation:shimmer 1.4s linear infinite;display:none;}
+@keyframes shimmer{from{background-position:0 0}to{background-position:200% 0}}
+
+/* Sidebar */
+.sidebar{width:224px;min-width:224px;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;flex-shrink:0;transition:width .2s,min-width .2s;}
+.sidebar.closed{width:0;min-width:0;overflow:hidden;}
+.sb-inner{width:224px;padding:10px 0 24px;}
+.sb-sec-hdr{padding:10px 14px 4px;font-size:9px;font-weight:700;color:var(--text-3);letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;}
+.sb-sec-hdr:hover{color:var(--text-2);}
+.sb-div{height:1px;background:var(--border);margin:8px 14px;}
+
+/* Filter items */
+.fi{display:flex;align-items:center;gap:8px;padding:5px 14px;cursor:pointer;transition:background .1s;user-select:none;}
+.fi:hover{background:var(--surface-2);}
+.fi.on{background:var(--primary-bg);}
+.fi-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.fi-lbl{flex:1;font-size:11.5px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fi.on .fi-lbl{color:var(--primary);font-weight:600;}
+.fi-cnt{font-size:10px;color:var(--text-3);background:var(--surface-2);border-radius:10px;padding:1px 6px;flex-shrink:0;font-weight:500;}
+.fi.on .fi-cnt{background:rgba(37,99,235,.12);color:var(--primary);}
+.fi-chk{width:14px;height:14px;border-radius:3px;border:1.5px solid var(--border-2);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;transition:all .15s;}
+.fi.on .fi-chk{border-color:var(--primary);background:var(--primary);color:#fff;}
+
+/* Customer search */
+.sb-cust-search{padding:4px 10px 4px;}
+.cust-srch{width:100%;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11.5px;padding:5px 9px;outline:none;font-family:inherit;}
+.cust-srch:focus{border-color:var(--primary);}
+.sb-cust-actions{display:flex;gap:4px;padding:2px 10px 4px;}
+.sb-act-btn{flex:1;font-size:10px;font-weight:600;padding:3px 6px;border-radius:5px;cursor:pointer;font-family:inherit;border:1px solid var(--border);background:var(--surface-2);color:var(--text-2);transition:all .15s;}
+.sb-act-btn:hover{background:var(--surface-3);color:var(--text);}
+
+/* Quick filter buttons */
+.qf-wrap{display:flex;flex-direction:column;gap:2px;padding:2px 10px 4px;}
+.qf{display:flex;align-items:center;gap:7px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:11.5px;border:none;background:transparent;font-family:inherit;color:var(--text-2);transition:all .15s;width:100%;text-align:left;}
+.qf:hover{background:var(--surface-2);}
+.qf.active{background:var(--primary-bg);color:var(--primary);font-weight:600;}
+.qf-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.clear-btn{margin:2px 14px 4px;display:block;font-size:10px;font-weight:600;color:#EF4444;background:none;border:none;cursor:pointer;font-family:inherit;padding:2px 0;}
+.clear-btn:hover{color:#DC2626;}
+
+/* Sidebar toggle */
+.sb-tog{position:fixed;bottom:16px;left:16px;background:var(--surface);border:1px solid var(--border);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:50;color:var(--text-2);font-size:13px;transition:all .15s;box-shadow:var(--shadow);}
+.sb-tog:hover{background:var(--surface-2);color:var(--text);}
+
+/* Month view */
+.mv-wrap{display:flex;flex-direction:column;height:100%;overflow:hidden;}
+.dow-row{display:grid;grid-template-columns:repeat(7,1fr);background:var(--surface);border-bottom:1px solid var(--border);}
+.dow-cell{text-align:center;padding:8px 0;font-size:9px;font-weight:700;color:var(--text-3);letter-spacing:.07em;}
+.mcells{display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(6,1fr);flex:1;overflow-y:auto;}
+.ccell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:5px 5px 4px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;gap:3px;transition:background .1s;min-height:80px;}
+.ccell:hover{background:rgba(37,99,235,.02);}
+.ccell.drag-ov{background:rgba(37,99,235,.05)!important;outline:2px dashed rgba(37,99,235,.3);outline-offset:-2px;}
+.ccell.faded{opacity:.3;}
+.dnum{font-size:12px;font-weight:400;color:var(--text-2);line-height:1;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;}
+.dnum.tod{background:var(--primary);color:#fff;border-radius:50%;font-weight:700;}
+.more-b{font-size:9px;font-weight:600;color:var(--primary);background:var(--primary-bg);border:none;border-radius:3px;padding:2px 5px;cursor:pointer;font-family:inherit;}
+.more-b:hover{background:rgba(37,99,235,.14);}
+
+/* Week view */
+.wv-wrap{display:flex;flex-direction:column;height:100%;overflow:hidden;}
+.wk-hdr{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));background:var(--surface);border-bottom:1px solid var(--border);}
+.wk-dh{text-align:center;padding:10px 6px;border-right:1px solid var(--border);cursor:pointer;transition:background .1s;}
+.wk-dh:hover{background:var(--surface-2);}
+.wk-dh.tod{background:var(--primary-bg);}
+.wdh-n{font-size:9px;font-weight:700;color:var(--text-3);letter-spacing:.06em;}
+.wdh-d{font-size:20px;font-weight:300;color:var(--text-2);line-height:1;margin-top:3px;}
+.wdh-d.tod{color:var(--primary);font-weight:700;}
+.wdh-c{font-size:9px;color:var(--text-3);margin-top:2px;}
+.wk-cols{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));flex:1;overflow-y:auto;}
+.wk-col{border-right:1px solid var(--border);padding:6px 4px;display:flex;flex-direction:column;gap:4px;min-height:200px;overflow:hidden;min-width:0;}
+.wk-col.tod{background:rgba(37,99,235,.015);}
+.wk-col.drag-ov{background:rgba(37,99,235,.05)!important;outline:2px dashed rgba(37,99,235,.3);outline-offset:-2px;}
+.col-empty{font-size:10px;color:var(--text-3);text-align:center;margin-top:14px;}
+
+/* Day view */
+.dv-wrap{height:100%;overflow-y:auto;padding:20px 24px;}
+.dv-head{font-size:22px;font-weight:700;color:var(--text);margin-bottom:3px;}
+.dv-sub{font-size:12px;color:var(--text-3);margin-bottom:20px;}
+.dv-card{display:flex;gap:0;background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:10px;cursor:pointer;transition:all .15s;overflow:hidden;box-shadow:var(--shadow-sm);}
+.dv-card:hover{box-shadow:var(--shadow-md);transform:translateY(-1px);}
+.dv-bar{width:5px;flex-shrink:0;}
+.dv-content{flex:1;padding:14px 16px;}
+.dv-top{display:flex;align-items:center;gap:10px;margin-bottom:4px;}
+.dv-num{font-size:11px;font-weight:700;letter-spacing:.05em;}
+.dv-num a{color:inherit;text-decoration:none;}
+.dv-num a:hover{text-decoration:underline;}
+.dv-cust{font-size:15px;font-weight:600;color:var(--text);}
+.dv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-top:12px;}
+.dv-f{background:var(--surface-2);border-radius:6px;padding:7px 10px;}
+.dv-fl{font-size:9px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;}
+.dv-fv{font-size:12px;color:var(--text);margin-top:2px;font-weight:500;}
+.dv-empty{text-align:center;padding:60px 0;color:var(--text-3);font-size:13px;}
+
+/* Year view */
+.yv-wrap{height:100%;overflow-y:auto;padding:16px 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;align-content:start;}
+.mm{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;cursor:pointer;transition:all .15s;box-shadow:var(--shadow-sm);}
+.mm:hover{box-shadow:var(--shadow-md);transform:translateY(-1px);}
+.mm-hdr{padding:9px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.mm-name{font-size:12px;font-weight:600;color:var(--text-2);}
+.mm-cnt{font-size:10px;font-weight:600;background:var(--primary-bg);color:var(--primary);border-radius:8px;padding:1px 7px;}
+.mm-grid{display:grid;grid-template-columns:repeat(7,1fr);padding:6px 8px 9px;gap:1px;}
+.mm-dow{text-align:center;font-size:7px;font-weight:600;color:var(--text-3);padding:2px 0;}
+.mm-day{display:flex;align-items:center;justify-content:center;height:17px;}
+
+/* SO Card */
+.soc{border-left:3px solid;border-radius:6px;padding:5px 6px;cursor:pointer;transition:all .15s;user-select:none;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.06);min-width:0;overflow:hidden;}
+.soc:hover{box-shadow:0 2px 8px rgba(0,0,0,.1);transform:translateY(-1px);}
+.soc-top{display:flex;align-items:center;justify-content:space-between;gap:3px;min-width:0;}
+.soc-n{font-size:10px;font-weight:700;letter-spacing:.03em;line-height:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.soc-n a{color:inherit;text-decoration:none;}
+.soc-n a:hover{text-decoration:underline;}
+.soc-ns{font-size:9px;opacity:.55;flex-shrink:0;color:inherit;text-decoration:none;line-height:1;}
+.soc-ns:hover{opacity:1;}
+.soc-c{font-size:11px;font-weight:500;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px;}
+.soc-s{font-size:9px;font-weight:600;border-radius:3px;padding:1px 5px;border:1px solid;display:inline-block;margin-top:2px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* Urgency */
+.urg-over{border-left-color:#EF4444!important;}
+
+/* Detail panel */
+.ov{display:none;position:fixed;inset:0;background:rgba(15,23,42,.2);backdrop-filter:blur(4px);z-index:200;}
+.ov.on{display:block;}
+.dp{position:fixed;top:0;right:0;bottom:0;width:460px;max-width:100vw;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;z-index:201;transform:translateX(100%);transition:transform .22s ease;box-shadow:var(--shadow-lg);}
+.dp.on{transform:translateX(0);}
+.dp-hdr{padding:18px 20px 14px;border-bottom:1px solid var(--border);border-left:4px solid transparent;position:relative;}
+.dp-sonum{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;}
+.dp-title{font-size:18px;font-weight:700;color:var(--text);margin-top:4px;line-height:1.2;}
+.dp-close{position:absolute;top:14px;right:14px;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--text-3);cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .15s;}
+.dp-close:hover{background:var(--surface-3);color:var(--text);}
+.dp-body{flex:1;overflow-y:auto;padding:16px 20px;}
+.dp-sec{margin-bottom:20px;}
+.dp-sec-t{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3);margin-bottom:10px;}
+.dp-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.dp-f{display:flex;flex-direction:column;gap:3px;}
+.dp-l{font-size:10px;color:var(--text-3);font-weight:500;}
+.dp-v{font-size:12px;color:var(--text);font-weight:500;}
+.dp-input{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:7px 10px;outline:none;width:100%;font-family:inherit;transition:all .15s;}
+.dp-input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.dp-ta{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:8px 10px;outline:none;width:100%;font-family:inherit;resize:vertical;min-height:60px;transition:all .15s;}
+.dp-ta:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.li-r{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--surface-2);border-radius:6px;margin-bottom:5px;border:1px solid var(--border);}
+.li-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.li-nm{flex:1;font-size:11px;color:var(--text-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.li-qty{font-size:10px;color:var(--text-3);flex-shrink:0;}
+.li-amt{font-size:11px;font-weight:600;color:var(--text-2);flex-shrink:0;}
+.li-tot{background:var(--surface-3);border-color:var(--border-2);}
+.li-tot .li-nm{font-weight:700;color:var(--text);}
+.li-tot .li-amt{color:var(--text);font-size:12px;}
+.dp-msg{font-size:11px;padding:7px 10px;border-radius:6px;margin-top:8px;}
+.dp-msg.ok{background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0;}
+.dp-msg.err{background:#FEF2F2;color:#B91C1C;border:1px solid #FECACA;}
+.stat-chip{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;border:1px solid;margin-top:6px;}
+.dp-ftr{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;}
+.save-b{flex:1;background:var(--primary);border:none;border-radius:7px;color:#fff;font-weight:700;font-size:12px;padding:9px;cursor:pointer;font-family:inherit;transition:all .15s;box-shadow:0 2px 4px rgba(37,99,235,.22);}
+.save-b:hover:not(:disabled){background:#1D4ED8;}
+.save-b:disabled{opacity:.5;cursor:not-allowed;}
+.ns-a{padding:9px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;color:var(--text-2);font-weight:600;font-size:11px;cursor:pointer;font-family:inherit;text-decoration:none;display:flex;align-items:center;gap:5px;transition:all .15s;}
+.ns-a:hover{background:var(--surface-3);color:var(--primary);}
+
+/* Toast */
+.toast{position:fixed;bottom:18px;right:18px;border-radius:9px;padding:10px 16px;font-size:12px;font-weight:600;z-index:9999;pointer-events:none;opacity:0;transform:translateY(7px);transition:opacity .3s,transform .3s;box-shadow:var(--shadow-md);}
+.toast.ok{background:#ECFDF5;border:1px solid #A7F3D0;color:#065F46;}
+.toast.err{background:#FEF2F2;border:1px solid #FECACA;color:#B91C1C;}
+.toast.show{opacity:1;transform:translateY(0);}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <header class="hdr">
+    <div class="logo">
+      <div class="logo-icon">📋</div>
+      <span class="logo-text">SO Calendar</span>
+    </div>
+    <div class="period" id="period"></div>
+    <button class="nav-btn" onclick="nav(-1)">&#8249;</button>
+    <button class="today-btn" onclick="goToday()">Today</button>
+    <button class="nav-btn" onclick="nav(1)">&#8250;</button>
+    <span class="cnt" id="cnt"></span>
+    <div class="spacer"></div>
+    <div class="view-sw">
+      <button class="vbtn" id="vb-year"  onclick="setView('year')">Year</button>
+      <button class="vbtn" id="vb-month" onclick="setView('month')">Month</button>
+      <button class="vbtn" id="vb-week"  onclick="setView('week')">Week</button>
+      <button class="vbtn" id="vb-day"   onclick="setView('day')">Day</button>
+    </div>
+    <div class="srch-wrap">
+      <span class="srch-icon">&#128269;</span>
+      <input class="srch" id="srch" type="text" placeholder="Search SO#…" oninput="onSearch(this.value)">
+    </div>
+    <div class="loading-bar" id="lb"></div>
+  </header>
+
+  <!-- BODY -->
+  <div class="body-wrap">
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sb">
+      <div class="sb-inner">
+        <button class="clear-btn" id="clear-btn" onclick="clearFilters()" style="display:none">&#10005; Clear all filters</button>
+
+        <!-- SHIP DATE quick filters -->
+        <div class="sb-sec-hdr" onclick="toggleSec('sq')">SHIP DATE <span id="sq-arr">&#9660;</span></div>
+        <div id="sq">
+          <div class="qf-wrap">
+            <button class="qf active" id="qf-all"  onclick="setDateF('all')"><span class="qf-dot" style="background:#94A3B8"></span>All Orders</button>
+            <button class="qf" id="qf-over" onclick="setDateF('over')"><span class="qf-dot" style="background:#EF4444"></span>Overdue</button>
+            <button class="qf" id="qf-week" onclick="setDateF('week')"><span class="qf-dot" style="background:#F59E0B"></span>This Week</button>
+            <button class="qf" id="qf-nwk"  onclick="setDateF('nwk')"><span class="qf-dot" style="background:#3B82F6"></span>Next Week</button>
+            <button class="qf" id="qf-mo"   onclick="setDateF('mo')"><span class="qf-dot" style="background:#8B5CF6"></span>This Month</button>
+          </div>
+        </div>
+
+        <div class="sb-div"></div>
+
+        <!-- STATUS -->
+        <div class="sb-sec-hdr" onclick="toggleSec('ss')">STATUS <span id="ss-arr">&#9660;</span></div>
+        <div id="ss">
+          <div class="fi" onclick="toggleF('status','B',this)"><div class="fi-dot" style="background:#0EA5E9"></div><div class="fi-lbl">Pending Fulfillment</div><div class="fi-cnt" id="sc-B">—</div><div class="fi-chk">&#10003;</div></div>
+          <div class="fi" onclick="toggleF('status','A',this)"><div class="fi-dot" style="background:#F59E0B"></div><div class="fi-lbl">Pending Approval</div><div class="fi-cnt" id="sc-A">—</div><div class="fi-chk">&#10003;</div></div>
+          <div class="fi" onclick="toggleF('status','D',this)"><div class="fi-dot" style="background:#8B5CF6"></div><div class="fi-lbl">Partially Fulfilled</div><div class="fi-cnt" id="sc-D">—</div><div class="fi-chk">&#10003;</div></div>
+          <div class="fi" onclick="toggleF('status','F',this)"><div class="fi-dot" style="background:#EF4444"></div><div class="fi-lbl">Pending Billing</div><div class="fi-cnt" id="sc-F">—</div><div class="fi-chk">&#10003;</div></div>
+          <div class="fi" onclick="toggleF('status','G',this)"><div class="fi-dot" style="background:#059669"></div><div class="fi-lbl">Billed</div><div class="fi-cnt" id="sc-G">—</div><div class="fi-chk">&#10003;</div></div>
+          <div class="fi" onclick="toggleF('status','E',this)"><div class="fi-dot" style="background:#F97316"></div><div class="fi-lbl">Pend. Billing/Part</div><div class="fi-cnt" id="sc-E">—</div><div class="fi-chk">&#10003;</div></div>
+          <div class="fi" onclick="toggleF('status','C',this)"><div class="fi-dot" style="background:#94A3B8"></div><div class="fi-lbl">Cancelled</div><div class="fi-cnt" id="sc-C">—</div><div class="fi-chk">&#10003;</div></div>
+        </div>
+
+        <div class="sb-div"></div>
+
+        <!-- CUSTOMERS -->
+        <div class="sb-sec-hdr" onclick="toggleSec('scw')">CUSTOMERS <span id="scw-arr">&#9660;</span></div>
+        <div id="scw">
+          <div class="sb-cust-search">
+            <input class="cust-srch" id="cust-srch" type="text" placeholder="Search customers…" oninput="filterCustList(this.value)">
+          </div>
+          <div class="sb-cust-actions">
+            <button class="sb-act-btn" onclick="selectAllCust()">Select All</button>
+            <button class="sb-act-btn" onclick="clearCust()">Clear</button>
+          </div>
+          <div id="sc-list"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main" id="main">
+      <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-3);flex-direction:column;gap:12px">
+        <div style="font-size:36px">📋</div>
+        <div style="font-size:14px">Loading calendar…</div>
+      </div>
+    </main>
+  </div>
+
+  <button class="sb-tog" id="sb-tog" onclick="toggleSb()" title="Toggle sidebar">&#9664;</button>
+
+  <!-- DETAIL PANEL -->
+  <div class="ov" id="ov" onclick="closeDP()"></div>
+  <div class="dp" id="dp">
+    <div class="dp-hdr" id="dp-hdr">
+      <div class="dp-sonum" id="dp-sonum"></div>
+      <div class="dp-title" id="dp-title"></div>
+      <div id="dp-chip"></div>
+      <button class="dp-close" onclick="closeDP()">&#10005;</button>
+    </div>
+    <div class="dp-body" id="dp-body"></div>
+    <div class="dp-ftr">
+      <button class="save-b" id="save-b" onclick="saveDP()">Save Changes</button>
+      <a class="ns-a" id="ns-a" href="#" target="_blank" rel="noreferrer">&#8599; Open in NetSuite</a>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+// ── State
+const S={
+  view:'month',date:new Date(),sos:[],search:'',sbOpen:true,
+  fStatus:new Set(),fCust:new Set(),dateF:'all',
+  expanded:new Set(),editId:null,editShip:'',editMemo:'',srchTimer:null,custSearch:''
+};
+
+// ── Colors (light-theme)
+const NEON=[
+  {b:'#E11D48',bg:'rgba(225,29,72,.06)',  t:'#9F1239'},
+  {b:'#0EA5E9',bg:'rgba(14,165,233,.06)', t:'#0369A1'},
+  {b:'#7C3AED',bg:'rgba(124,58,237,.06)', t:'#5B21B6'},
+  {b:'#059669',bg:'rgba(5,150,105,.06)',  t:'#065F46'},
+  {b:'#D97706',bg:'rgba(217,119,6,.06)',  t:'#92400E'},
+  {b:'#DC2626',bg:'rgba(220,38,38,.06)',  t:'#991B1B'},
+  {b:''#2563EB',bg:'rgba(37,99,235,.06)',  t:'#1E3A8A'},
+  {b:'#DB2777',bg:'rgba(219,39,119,.06)', t:'#9D174D'},
+  {b:'#16A34A',bg:'rgba(22,163,74,.06)',  t:'#14532D'},
+  {b:'#9333EA',bg:'rgba(147,51,234,.06)', t:'#6B21A8'},
+];
+const SC={
+  A:{b:'#F59E0B',bg:'rgba(245,158,11,.07)', t:'#92400E'},
+  B:{b:'#0EA5E9',bg:'rgba(14,165,233,.07)', t:'#0369A1'},
+  C:{b:'#94A3B8',bg:'rgba(148,163,184,.07)',t:'#475569'},
+  D:{b:'#8B5CF6',bg:'rgba(139,92,246,.07)', t:'#5B21B6'},
+  E:{b:'#F97316',bg:'rgba(249,115,22,.07)', t:'#9A3412'},
+  F:{b:'#EF4444',bg:'rgba(239,68,68,.07)',  t:'#B91C1C'},
+  G:{b:'#059669',bg:'rgba(5,150,105,.07)',  t:'#065F46'},
+  H:{b:'#64748B',bg:'rgba(100,116,139,.07)',t:'#334155'},
+};
+const SL={A:'Pending Approval',B:'Pending Fulfillment',C:'Cancelled',D:'Partially Fulfilled',E:'Pend. Billing/Part',F:'Pending Billing',G:'Billed',H:'Closed'};
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+// ── Pinned customer colors (readable on white)
+const CUST_PINS=[
+  [/heb/i,                               {b:'#39FF14',bg:'rgba(57,255,20,.07)', t:'#166534'}],
+  [/walmart|sam'?s?\s*club|sams/i,       {b:'#39FF14',bg:'rgba(57,255,20,.07)', t:'#166534'}],
+  [/meijer/i,                            {b:'#39FF14',bg:'rgba(57,255,20,.07)', t:'#166534'}],
+  [/whole\s*foods|tony'?s?(\s|$)/i,      {b:'#39FF14',bg:'rgba(57,255,20,.07)', t:'#166534'}],
+  [/\btdp\b/i,                           {b:'#2563EB',bg:'rgba(37,99,235,.07)', t:'#1E3A8A'}],
+  [/johnson'?s?\s*(bros?|brothers?)/i,   {b:'#7C3AED',bg:'rgba(124,58,237,.07)',t:'#5B21B6'}],
+  [/quik.?trip|quick.?trip|\bqt\b/i,    {b:'#EF4444',bg:'rgba(239,68,68,.07)', t:'#B91C1C'}],
+];
+const _ccache={};
+function cc(id,name){
+  const k=String(id);
+  if(_ccache[k])return _ccache[k];
+  if(name){for(const[pat,col]of CUST_PINS){if(pat.test(name)){_ccache[k]=col;return col;}}}
+  const h=k.split('').reduce((a,c)=>(a*31+c.charCodeAt(0))|0,7);
+  const col=NEON[Math.abs(h)%NEON.length];
+  _ccache[k]=col;return col;
+}
+
+// ── Date utils
+const toISO=d=>{const[y,m,dd]=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')];return`${y}-${m}-${dd}`;};
+const parseNS=s=>{if(!s)return null;const[m,d,y]=s.split('/');return new Date(+y,+m-1,+d);};
+const nsToISO=s=>{const d=parseNS(s);return d?toISO(d):'';};
+const isoToNS=s=>{if(!s)return'';const[y,m,d]=s.split('-');return`${m}/${d}/${y}`;};
+const fmtNS=s=>{const d=parseNS(s);return d?d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):''};
+const isToday=d=>{const n=new Date();return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate();};
+const fmtCur=v=>{const n=Math.abs(+v);return isNaN(n)?'—':'$'+n.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})};
+const esc=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+function getGrid(y,m){const g=[];const f=new Date(y,m,1);const s=new Date(f);s.setDate(s.getDate()-s.getDay());for(let i=0;i<42;i++){g.push(new Date(s));s.setDate(s.getDate()+1);}return g;}
+function getWeek(d){const w=new Date(d);w.setDate(w.getDate()-w.getDay());return Array.from({length:7},()=>{const x=new Date(w);w.setDate(w.getDate()+1);return x;});}
+function groupByDate(arr){const m={};for(const o of arr){const k=nsToISO(o.shipdate);if(!k)continue;if(!m[k])m[k]=[];m[k].push(o);}return m;}
+
+function getPeriod(){
+  const d=S.date,y=d.getFullYear(),m=d.getMonth();
+  if(S.view==='year')return String(y);
+  if(S.view==='month')return`${MONTHS[m]} ${y}`;
+  if(S.view==='week'){const wd=getWeek(d);const a=wd[0],b=wd[6];return a.getMonth()===b.getMonth()?`${MONTHS[a.getMonth()]} ${a.getDate()}–${b.getDate()}, ${y}`:`${MONTHS[a.getMonth()]} ${a.getDate()} – ${MONTHS[b.getMonth()]} ${b.getDate()}, ${y}`;}
+  return d.toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric',year:'numeric'});
+}
+
+function getRange(){
+  const d=S.date,y=d.getFullYear(),m=d.getMonth();
+  if(S.view==='year')return{s:`${y}-01-01`,e:`${y}-12-31`};
+  if(S.view==='month'){const g=getGrid(y,m);return{s:toISO(g[0]),e:toISO(g[41])};}
+  if(S.view==='week'){const w=getWeek(d);return{s:toISO(w[0]),e:toISO(w[6])};}
+  return{s:toISO(d),e:toISO(d)};
+}
+
+// ── Date filter range
+function getDateFRange(){
+  const now=new Date();const todStr=toISO(now);
+  if(S.dateF==='all')return null;
+  if(S.dateF==='over')return{end:todStr,strict:true};
+  if(S.dateF==='week'){const w=getWeek(now);return{start:toISO(w[0]),end:toISO(w[6])};}
+  if(S.dateF==='nwk'){const nxt=new Date(now);nxt.setDate(nxt.getDate()+7);const w=getWeek(nxt);return{start:toISO(w[0]),end:toISO(w[6])};}
+  if(S.dateF==='mo'){const y=now.getFullYear(),m=now.getMonth();return{start:toISO(new Date(y,m,1)),end:toISO(new Date(y,m+1,0))};}
+  return null;
+}
+
+// ── Filtered SOs
+function filt(){
+  let l=S.sos;
+  if(S.fStatus.size)l=l.filter(o=>S.fStatus.has(o.status));
+  if(S.fCust.size)l=l.filter(o=>S.fCust.has(String(o.entity)));
+  if(S.search)l=l.filter(o=>o.tranid?.toUpperCase().includes(S.search.toUpperCase()));
+  if(S.dateF!=='all'){
+    const dfr=getDateFRange();
+    if(dfr)l=l.filter(o=>{
+      const iso=nsToISO(o.shipdate);if(!iso)return false;
+      if(dfr.strict)return iso<dfr.end;
+      return(!dfr.start||iso>=dfr.start)&&(!dfr.end||iso<=dfr.end);
+    });
+  }
+  return l;
+}
+
+// ── Loading
+function loading(v){document.getElementById('lb').style.display=v?'block':'none';}
+
+// ── Data
+async function loadSOs(){
+  loading(true);
+  const{s,e:e2}=getRange();
+  try{
+    const resp=await fetch('/suiteql',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({query:`SELECT t.id,t.tranid,t.trandate,t.shipdate,t.entity,e.altname AS customer_name,t.status,t.memo,t.createddate FROM transaction t LEFT JOIN entity e ON t.entity=e.id WHERE t.type='SalesOrd' AND t.shipdate IS NOT NULL AND t.shipdate>=TO_DATE('${s}','YYYY-MM-DD') AND t.shipdate<=TO_DATE('${e2}','YYYY-MM-DD') ORDER BY t.shipdate ASC,t.tranid ASC`,limit:1000,offset:0})});
+    if(!resp.ok){const err=await resp.json();showErrState(JSON.stringify(err.error||err));return;}
+    const d=await resp.json();
+    S.sos=d.items||d.data||[];
+    buildCustFilters();updateStatusCounts();render();
+  }catch(err){showErrState(err.message);}
+  finally{loading(false);}
+}
+
+function showErrState(msg){
+  document.getElementById('main').innerHTML=`
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;padding:40px">
+      <div style="font-size:36px">&#9888;&#65039;</div>
+      <div style="font-size:14px;font-weight:700;color:#B91C1C">Failed to load sales orders</div>
+      <div style="font-size:12px;color:#64748B;max-width:480px;text-align:center;background:#FEF2F2;border:1px solid #FECACA;border-radius:8px;padding:12px 16px;word-break:break-all">${esc(msg)}</div>
+      <button onclick="loadSOs()" style="background:#2563EB;border:none;border-radius:8px;color:#fff;font-weight:700;font-size:12px;padding:9px 20px;cursor:pointer;font-family:inherit">&#8635; Retry</button>
+    </div>`;
+}
+
+async function loadLines(soId){
+  const resp=await fetch('/suiteql',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({query:`SELECT tl.item,i.itemid,tl.quantity,tl.rate,tl.netamount FROM transactionline tl LEFT JOIN item i ON tl.item=i.id WHERE tl.transaction=${soId} AND tl.mainline='F' AND tl.item>0`,limit:100,offset:0})});
+  if(!resp.ok)throw new Error(await resp.text());
+  const d=await resp.json();
+  return(d.items||d.data||[]).map(l=>({...l,quantity:Math.abs(l.quantity||0),amount:Math.abs(l.netamount||0)}));
+}
+
+// ── Urgency
+function urgClass(shipdate){
+  if(!shipdate)return'';
+  const iso=nsToISO(shipdate),today=toISO(new Date());
+  return iso<today?'urg-over':'';
+}
+
+// ── Render
+function render(){
+  document.getElementById('period').textContent=getPeriod();
+  const fl=filt();
+  document.getElementById('cnt').textContent=fl.length?`${fl.length} order${fl.length!==1?'s':''}`:'';
+  ['year','month','week','day'].forEach(v=>document.getElementById('vb-'+v).className='vbtn'+(S.view===v?' active':''));
+  const g=groupByDate(fl);
+  const m=document.getElementById('main');
+  if(S.view==='month')renderMonth(m,g);
+  else if(S.view==='week')renderWeek(m,g);
+  else if(S.view==='day')renderDay(m,g);
+  else renderYear(m,g);
+}
+
+function socHTML(so,drag=true){
+  const c=cc(so.entity,so.customer_name),sc=SC[so.status]||SC.B;
+  const urg=urgClass(so.shipdate);
+  const nsUrl=`https://system.netsuite.com/app/accounting/transactions/salesord.nl?id=${so.id}`;
+  return`<div class="soc${urg?' '+urg:''}" data-id="${so.id}" draggable="${drag}" style="border-left-color:${c.b};background:${c.bg}" onclick="event.stopPropagation();openDP(${so.id})" ondragstart="dstart(event,${so.id})" title="${esc(so.tranid)} — ${esc(so.customer_name)}">
+    <div class="soc-top">
+      <div class="soc-n" style="color:${c.t}"><a href="${nsUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()" style="color:inherit">#${esc(so.tranid)}</a></div>
+      <a class="soc-ns" href="${nsUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()" style="color:${c.t}" title="Open SO in NetSuite">&#8599;</a>
+    </div>
+    <div class="soc-c">${esc(so.customer_name||'')}</div>
+    <div class="soc-s" style="color:${sc.t};border-color:${sc.b};background:${sc.bg}">${SL[so.status]||so.status}</div>
+  </div>`;
+}
+
+function renderMonth(m,g){
+  const y=S.date.getFullYear(),mo=S.date.getMonth();
+  const grid=getGrid(y,mo);
+  let h=`<div class="mv-wrap"><div class="dow-row">${DS.map(d=>`<div class="dow-cell">${d}</div>`).join('')}</div><div class="mcells">`;
+  for(const d of grid){
+    const iso=toISO(d),inM=d.getMonth()===mo,tod=isToday(d),sos=g[iso]||[],exp=S.expanded.has(iso);
+    const vis=exp?sos:sos.slice(0,3),ov=sos.length-3;
+    h+=`<div class="ccell${inM?'':' faded'}" data-date="${iso}" onclick="drillDay('${iso}')" ondragover="event.preventDefault();this.classList.add('drag-ov')" ondragleave="this.classList.remove('drag-ov')" ondrop="drop(event,'${iso}')">
+      <div class="dnum${tod?' tod':''}">${d.getDate()}</div>
+      ${vis.map(so=>socHTML(so)).join('')}
+      ${!exp&&ov>0?`<button class="more-b" onclick="event.stopPropagation();S.expanded.add('${iso}');render()">+${ov} more</button>`:''}
+      ${exp&&sos.length>3?`<button class="more-b" onclick="event.stopPropagation();S.expanded.delete('${iso}');render()">Show less</button>`:''}
+    </div>`;
+  }
+  m.innerHTML=h+'</div></div>';
+}
+
+function renderWeek(m,g){
+  const days=getWeek(S.date);
+  let h=`<div class="wv-wrap"><div class="wk-hdr">`;
+  for(const d of days){
+    const iso=toISO(d),tod=isToday(d),ct=(g[iso]||[]).length;
+    h+=`<div class="wk-dh${tod?' tod':''}" onclick="drillDay('${iso}')"><div class="wdh-n">${DS[d.getDay()]}</div><div class="wdh-d${tod?' tod':''}">${d.getDate()}</div>${ct?`<div class="wdh-c">${ct} order${ct>1?'s':''}</div>`:''}</div>`;
+  }
+  h+='</div><div class="wk-cols">';
+  for(const d of days){
+    const iso=toISO(d),sos=g[iso]||[],tod=isToday(d);
+    h+=`<div class="wk-col${tod?' tod':''}" ondragover="event.preventDefault();this.classList.add('drag-ov')" ondragleave="this.classList.remove('drag-ov')" ondrop="drop(event,'${iso}')">
+      ${sos.length?sos.map(so=>socHTML(so)).join(''):'<div class="col-empty">No orders</div>'}
+    </div>`;
+  }
+  m.innerHTML=h+'</div></div>';
+}
+
+function renderDay(m,g){
+  const iso=toISO(S.date),sos=g[iso]||[],tod=isToday(S.date);
+  let h=`<div class="dv-wrap">
+    <div class="dv-head">${S.date.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}${tod?'<span style="margin-left:10px;font-size:11px;font-weight:600;color:#2563EB;background:rgba(37,99,235,.08);border-radius:20px;padding:2px 10px;vertical-align:middle">Today</span>':''}</div>
+    <div class="dv-sub">${sos.length} order${sos.length!==1?'s':''} shipping ${tod?'today':'this day'}</div>`;
+  if(!sos.length)h+=`<div class="dv-empty">No orders scheduled to ship this day.</div>`;
+  for(const so of sos){
+    const c=cc(so.entity,so.customer_name),sc=SC[so.status]||SC.B;
+    const nsUrl=`https://system.netsuite.com/app/accounting/transactions/salesord.nl?id=${so.id}`;
+    h+=`<div class="dv-card" onclick="openDP(${so.id})">
+      <div class="dv-bar" style="background:${c.b}"></div>
+      <div class="dv-content">
+        <div class="dv-top">
+          <div class="dv-num" style="color:${c.t}"><a href="${nsUrl}" target="_blank" rel="noreferrer" onclick="event.stopPropagation()" style="color:inherit">#${esc(so.tranid)} &#8599;</a></div>
+          <span class="stat-chip" style="color:${sc.t};border-color:${sc.b};background:${sc.bg};margin-top:0">${SL[so.status]||so.status}</span>
+        </div>
+        <div class="dv-cust">${esc(so.customer_name||'')}</div>
+        <div class="dv-grid">
+          <div class="dv-f"><div class="dv-fl">Created</div><div class="dv-fv">${fmtNS(so.createddate)}</div></div>
+          <div class="dv-f"><div class="dv-fl">Tran Date</div><div class="dv-fv">${fmtNS(so.trandate)}</div></div>
+          <div class="dv-f"><div class="dv-fl">Ship Date</div><div class="dv-fv">${fmtNS(so.shipdate)}</div></div>
+          ${so.memo?`<div class="dv-f" style="grid-column:1/-1"><div class="dv-fl">Memo</div><div class="dv-fv">${esc(so.memo)}</div></div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }
+  m.innerHTML=h+'</div>';
+}
+
+function renderYear(m,g){
+  const y=S.date.getFullYear();
+  let h='<div class="yv-wrap">';
+  for(let mo=0;mo<12;mo++){
+    const grid=getGrid(y,mo);
+    const tot=grid.filter(d=>d.getMonth()===mo).reduce((a,d)=>a+(g[toISO(d)]||[]).length,0);
+    h+=`<div class="mm" onclick="drillMonth(${y},${mo})">
+      <div class="mm-hdr"><span class="mm-name">${MONTHS[mo]}</span>${tot?`<span class="mm-cnt">${tot}</span>`:''}</div>
+      <div class="mm-grid">
+        ${DS.map(d=>`<div class="mm-dow">${d[0]}</div>`).join('')}
+        ${grid.map(d=>{
+          const iso=toISO(d),inM=d.getMonth()===mo,tod=isToday(d)&&inM,cnt=inM?(g[iso]||[]).length:0;
+          const fc=cnt?(g[iso][0]):null,dc=fc?cc(fc.entity,fc.customer_name).b:'#2563EB';
+          let dot='';
+          if(tod)dot=`<div style="width:15px;height:15px;border-radius:50%;background:#2563EB"></div>`;
+          else if(cnt)dot=`<div style="width:${Math.min(14,6+cnt*2)}px;height:${Math.min(5,2+cnt)}px;border-radius:3px;background:${dc}"></div>`;
+          return`<div class="mm-day" style="opacity:${inM?1:0}">${dot}</div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+  m.innerHTML=h+'</div>';
+}
+
+// ── Detail Panel
+async function openDP(soId){
+  const so=S.sos.find(s=>s.id===soId);if(!so)return;
+  const c=cc(so.entity,so.customer_name),sc=SC[so.status]||SC.B;
+  S.editId=soId;S.editShip=nsToISO(so.shipdate);S.editMemo=so.memo||'';
+  const hdr=document.getElementById('dp-hdr');
+  hdr.style.borderLeftColor=c.b;hdr.style.background=c.bg;
+  document.getElementById('dp-sonum').style.color=c.t;
+  document.getElementById('dp-sonum').textContent='Sales Order #'+so.tranid;
+  document.getElementById('dp-title').textContent=so.customer_name||'';
+  document.getElementById('dp-chip').innerHTML=`<span class="stat-chip" style="color:${sc.t};border-color:${sc.b};background:${sc.bg}">${SL[so.status]||so.status}</span>`;
+  document.getElementById('ns-a').href=`https://system.netsuite.com/app/accounting/transactions/salesord.nl?id=${soId}`;
+  document.getElementById('save-b').disabled=false;
+  document.getElementById('save-b').textContent='Save Changes';
+  document.getElementById('dp-body').innerHTML=`
+    <div class="dp-sec">
+      <div class="dp-sec-t">Key Dates</div>
+      <div class="dp-grid">
+        <div class="dp-f"><div class="dp-l">Created</div><div class="dp-v">${fmtNS(so.createddate)}</div></div>
+        <div class="dp-f"><div class="dp-l">Transaction Date</div><div class="dp-v">${fmtNS(so.trandate)}</div></div>
+      </div>
+    </div>
+    <div class="dp-sec">
+      <div class="dp-sec-t">Edit Details</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="dp-f"><div class="dp-l">Ship Date</div><input class="dp-input" type="date" id="dp-ship" value="${S.editShip}" oninput="S.editShip=this.value"></div>
+        <div class="dp-f"><div class="dp-l">Memo / Notes</div><textarea class="dp-ta" id="dp-memo" oninput="S.editMemo=this.value">${esc(S.editMemo)}</textarea></div>
+      </div>
+      <div id="dp-msg"></div>
+    </div>
+    <div class="dp-sec" id="dp-lines">
+      <div class="dp-sec-t">Products</div>
+      <div id="dp-li" style="color:var(--text-3);font-size:12px">Loading items…</div>
+    </div>`;
+  document.getElementById('ov').classList.add('on');
+  document.getElementById('dp').classList.add('on');
+  try{
+    const lines=await loadLines(soId);
+    if(!lines.length){document.getElementById('dp-li').innerHTML=`<div style="color:var(--text-3);font-size:11px">No line items found.</div>`;return;}
+    const tot=lines.reduce((a,l)=>a+l.amount,0);
+    document.getElementById('dp-lines').querySelector('.dp-sec-t').textContent=`Products (${lines.length} line${lines.length!==1?'s':''})`;
+    let li=lines.map((l,i)=>{const lc=cc(l.item||i);const nm=l.itemid||('Item #'+(l.item||l.linenumber));return`<div class="li-r"><div class="li-dot" style="background:${lc.b}"></div><div class="li-nm">${esc(nm)}</div><div class="li-qty">\xd7${l.quantity}</div><div class="li-amt">${fmtCur(l.amount)}</div></div>`;}).join('');
+    if(lines.length>1)li+=`<div class="li-r li-tot"><div class="li-nm">Total</div><div class="li-amt">${fmtCur(tot)}</div></div>`;
+    document.getElementById('dp-li').innerHTML=li;
+  }catch(err){document.getElementById('dp-li').innerHTML=`<div style="color:#B91C1C;font-size:11px">Could not load items: ${err.message}</div>`;}
+}
+
+async function saveDP(){
+  const btn=document.getElementById('save-b');
+  btn.disabled=true;btn.textContent='Saving…';
+  const msg=document.getElementById('dp-msg');msg.className='dp-msg';msg.textContent='';
+  try{
+    const payload={};
+    if(S.editShip)payload.shipdate=isoToNS(S.editShip);
+    payload.memo=S.editMemo;
+    const sr=await fetch(`/record/salesorder/${S.editId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!sr.ok){const e=await sr.json();throw new Error(JSON.stringify(e.error||e));}
+    S.sos=S.sos.map(o=>o.id===S.editId?{...o,shipdate:S.editShip?isoToNS(S.editShip):o.shipdate,memo:S.editMemo}:o);
+    msg.className='dp-msg ok';msg.textContent='Saved to NetSuite ✓';
+    render();setTimeout(()=>{msg.textContent='';},3000);
+  }catch(err){msg.className='dp-msg err';msg.textContent='Error: '+err.message;}
+  finally{btn.disabled=false;btn.textContent='Save Changes';}
+}
+
+function closeDP(){document.getElementById('ov').classList.remove('on');document.getElementById('dp').classList.remove('on');}
+
+// ── Drag & Drop
+let _did=null;
+function dstart(ev,id){_did=id;ev.dataTransfer.effectAllowed='move';}
+async function drop(ev,iso){
+  ev.preventDefault();
+  document.querySelectorAll('.drag-ov').forEach(el=>el.classList.remove('drag-ov'));
+  if(!_did)return;
+  const soId=_did;_did=null;
+  const so=S.sos.find(s=>s.id===soId);
+  if(!so||nsToISO(so.shipdate)===iso)return;
+  const nsD=isoToNS(iso);
+  S.sos=S.sos.map(s=>s.id===soId?{...s,shipdate:nsD}:s);render();
+  try{
+    const dr=await fetch(`/record/salesorder/${soId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({shipdate:nsD})});
+    if(!dr.ok)throw new Error(await dr.text());
+    toast(`SO #${so.tranid} moved to ${nsD} ✓`,'ok');
+  }catch(err){S.sos=S.sos.map(s=>s.id===soId?so:s);render();toast('Move failed: '+err.message,'err');}
+}
+
+// ── Navigation
+function nav(dir){
+  const d=new Date(S.date);
+  if(S.view==='year')d.setFullYear(d.getFullYear()+dir);
+  else if(S.view==='month')d.setMonth(d.getMonth()+dir);
+  else if(S.view==='week')d.setDate(d.getDate()+dir*7);
+  else d.setDate(d.getDate()+dir);
+  S.date=d;loadSOs();
+}
+function goToday(){S.date=new Date();loadSOs();}
+function setView(v){S.view=v;loadSOs();}
+function drillDay(iso){S.date=new Date(iso+'T12:00:00');S.view='day';loadSOs();}
+function drillMonth(y,m){S.date=new Date(y,m,1);S.view='month';loadSOs();}
+
+// ── Filters
+function toggleF(type,val,el){
+  const set=type==='status'?S.fStatus:S.fCust;
+  if(set.has(val)){set.delete(val);el.classList.remove('on');}else{set.add(val);el.classList.add('on');}
+  updateClearBtn();render();
+}
+function setDateF(val){
+  S.dateF=val;
+  ['all','over','week','nwk','mo'].forEach(k=>{const b=document.getElementById('qf-'+k);if(b)b.classList.toggle('active',k===val);});
+  updateClearBtn();render();
+}
+function clearFilters(){
+  S.fStatus.clear();S.fCust.clear();S.dateF='all';
+  document.querySelectorAll('.fi.on').forEach(el=>el.classList.remove('on'));
+  ['all','over','week','nwk','mo'].forEach(k=>{const b=document.getElementById('qf-'+k);if(b)b.classList.toggle('active',k==='all');});
+  updateClearBtn();render();
+}
+function updateClearBtn(){
+  document.getElementById('clear-btn').style.display=(S.fStatus.size||S.fCust.size||S.dateF!=='all')?'block':'none';
+}
+function toggleSec(id){
+  const el=document.getElementById(id);
+  const arr=document.getElementById(id+'-arr');
+  const hidden=el.style.display==='none';
+  el.style.display=hidden?'':'none';
+  arr.textContent=hidden?'▾':'▸';
+}
+  else if(ev.key==='Escape')closeDP();
+  else if(ev.key==='t')goToday();
+  else if(ev.key==='m')setView('month');
+  else if(ev.key==='w')setView('week');
+  else if(ev.key==='d')setView('day');
+  else if(ev.key==='y')setView('year');
+});
+
+// ── Toast
+let _tt=null;
+function toast(msg,type='ok'){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className=`toast ${type} show`;
+  clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),3500);
+}
+
+loadSOs();
+</script>
+</body>
+</html>
+function toggleSb(){
+  S.sbOpen=!S.sbOpen;
+  document.getElementById('sb').classList.toggle('closed',!S.sbOpen);
+  document.getElementById('sb-tog').innerHTML=S.sbOpen?'&#9664;':'&#9654;';
+}
+
+function updateStatusCounts(){
+  const counts={};
+  for(const o of S.sos)counts[o.status]=(counts[o.status]||0)+1;
+  ['A','B','C','D','E','F','G','H'].forEach(k=>{const el=document.getElementById('sc-'+k);if(el)el.textContent=counts[k]||'0';});
+}
+
+function buildCustFilters(){
+  const map=new Map();const counts={};
+  for(const o of S.sos){
+    const k=String(o.entity);
+    if(o.entity&&o.customer_name&&!map.has(k))map.set(k,o.customer_name);
+    if(o.entity)counts[k]=(counts[k]||0)+1;
+  }
+  const sorted=[...map.entries()].sort((a,b)=>a[1].localeCompare(b[1]));
+  window._custMap=sorted;window._custCounts=counts;
+  renderCustList(sorted,counts,S.custSearch);
+}
+
+function renderCustList(sorted,counts,q){
+  const lq=q?q.toLowerCase():'';
+  const filtered=lq?sorted.filter(([,name])=>name.toLowerCase().includes(lq)):sorted;
+  document.getElementById('sc-list').innerHTML=filtered.map(([id,name])=>{
+    const c=cc(id,name),cnt=counts[id]||0,on=S.fCust.has(id)?' on':'';
+    return`<div class="fi${on}" onclick="toggleF('cust','${id}',this)"><div class="fi-dot" style="background:${c.b}"></div><div class="fi-lbl" title="${esc(name)}">${esc(name)}</div><div class="fi-cnt">${cnt}</div><div class="fi-chk">&#10003;</div></div>`;
+  }).join('')||`<div style="padding:6px 14px;font-size:11px;color:var(--text-3)">No customers match</div>`;
+}
+
+function filterCustList(q){
+  S.custSearch=q;
+  if(window._custMap)renderCustList(window._custMap,window._custCounts||{},q);
+}
+function selectAllCust(){
+  if(!window._custMap)return;
+  const lq=S.custSearch?S.custSearch.toLowerCase():'';
+  const toAdd=lq?window._custMap.filter(([,n])=>n.toLowerCase().includes(lq)):window._custMap;
+  toAdd.forEach(([id])=>S.fCust.add(id));
+  renderCustList(window._custMap,window._custCounts||{},S.custSearch);
+  updateClearBtn();render();
+}
+function clearCust(){
+  S.fCust.clear();
+  document.querySelectorAll('#sc-list .fi.on').forEach(el=>el.classList.remove('on'));
+  updateClearBtn();render();
+}
+
+// ── Search
+function onSearch(v){clearTimeout(S.srchTimer);S.srchTimer=setTimeout(()=>{S.search=v;render();},300);}
+
+// ── Keyboard
+document.addEventListener('keydown',ev=>{
+  if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;
+  if(ev.key==='ArrowLeft')nav(-1);
+  else if(ev.key==='ArrowRight')nav(1);
+  else if(ev.key==='Escape')closeDP();
+  else if(ev.key==='t')goToday();
+  else if(ev.key==='m')setView('month');
+  else if(ev.key==='w')setView('week');
+  else if(ev.key==='d')setView('day');
+  else if(ev.key==='y')setView('year');
+});
+
+// ── Toast
+let _tt=null;
+function toast(msg,type='ok'){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className=`toast ${type} show`;
+  clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),3500);
+}
+
+loadSOs();
+</script>
+</body>
+</html>
